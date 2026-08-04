@@ -1,0 +1,4 @@
+build/
+external/ffmpeg-src/
+external/ffmpeg-install/
+.DS_Store
