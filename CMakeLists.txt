@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Splice VERSION 1.0.0 LANGUAGES C CXX)
 
+# Optional build number, appended as a fourth version component (1.0.0.42) to the
+# app's bundle/file version, so two builds of the same release can be told apart.
+# Empty for local builds.
+set(SPLICE_BUILD_NUMBER "" CACHE STRING "Build number appended to the app version")
+set(SPLICE_APP_VERSION "${PROJECT_VERSION}")
+if(SPLICE_BUILD_NUMBER)
+    string(APPEND SPLICE_APP_VERSION ".${SPLICE_BUILD_NUMBER}")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -123,7 +132,7 @@ endif()
 # (In-window drag-and-drop works without it — that's handled by the
 # FileDragAndDropTarget in MainComponent.)
 juce_add_gui_app(Splice
-    VERSION "${PROJECT_VERSION}"
+    VERSION "${SPLICE_APP_VERSION}"
     PRODUCT_NAME "Splice"
     COMPANY_NAME "Hybrid Constructs"
     BUNDLE_ID "com.hybridconstructs.splice"

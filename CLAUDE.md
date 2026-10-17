@@ -279,6 +279,10 @@ never downloads or installs anything.
   read as "no update"; there is no error UI by design.
 - The running version comes from `JUCE_APPLICATION_VERSION_STRING`, i.e. the CMake
   `project(VERSION)`. Bump it there; `Main.cpp` no longer hardcodes it.
+- `-DSPLICE_BUILD_NUMBER=N` appends a fourth component (`1.0.0.N`) to the bundle/file
+  version and to `JUCE_APPLICATION_VERSION_STRING`. The compare treats a missing
+  component as 0, so `1.0.0` is not newer than `1.0.0.N`, and `1.0.1` is. Release
+  builds set it; tags and `project(VERSION)` stay three-part.
 - The check runs on a thread; the destructor cancels the in-flight `WebInputStream`
   so quitting never waits on a slow connection.
 
