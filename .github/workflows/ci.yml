@@ -71,3 +71,34 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release -j 4
+
+  build-windows:
+    name: Build (Windows, unsigned)
+    runs-on: windows-latest
+    env:
+      # GitHub-hosted Windows images ship vcpkg here; the preset reads VCPKG_ROOT.
+      VCPKG_ROOT: C:\vcpkg
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Puts cl.exe on PATH for the Ninja generator the `windows` preset uses.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # vcpkg builds FFmpeg + x264 + snappy from source on first run; its
+      # binary cache is keyed on the manifest so later runs skip that.
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\vcpkg\archives
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+
+      - name: Fetch JUCE
+        run: git clone --depth 1 --branch 8.0.7 https://github.com/juce-framework/JUCE external/JUCE
+
+      - name: Configure
+        run: cmake --preset windows -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j 4
