@@ -2,6 +2,8 @@
 
 <img src="assets/icon.png" alt="Splice" width="128">
 
+Download: [hybridconstructs.com/splice](https://hybridconstructs.com/splice)
+
 Takes two video files and combines them into a single **Hap Alpha** `.mov`:
 the **RGB** comes from the first clip, the **alpha** from the luminance of the
 second. Drag, drop, encode. Encoding runs entirely locally. The only network call is a version check at

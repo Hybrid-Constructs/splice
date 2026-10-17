@@ -200,8 +200,8 @@ never downloads or installs anything.
   unauthenticated and returns only a version number, with no URLs from the server
   that the app follows. Keep it that way: don't add a key, and don't make the app
   open a URL taken from the response.
-- **`downloadUrl` empty means the check is off:** no request, no button. Set it
-  to switch the feature on.
+- **`downloadUrl` is the Splice page, `https://hybridconstructs.com/splice`.**
+  Emptying it switches the check off: no request, no button.
 - Failures (offline, timeout, bad JSON, 404 before a version is published) all
   read as "no update"; there is no error UI by design.
 - The running version comes from `JUCE_APPLICATION_VERSION_STRING`, i.e. the CMake

@@ -6,15 +6,15 @@
     Where to look for updates and where to send the user when there is one.
 
     The feed is a public, read-only route that serves Splice's version number
-    and nothing else, so no key is needed. Fill in `downloadUrl` to show the
-    button; while it is empty, no request is made.
+    and nothing else, so no key is needed. Clearing `downloadUrl` turns the
+    check off: no request is made and no button is shown.
 */
 namespace UpdateConfig
 {
     inline const char* const feedUrl = "https://api.hybridconstructs.com/v2/public/updates/splice";
 
     /** Opened in the browser when the user clicks the update button. */
-    inline const char* const downloadUrl = "";
+    inline const char* const downloadUrl = "https://hybridconstructs.com/splice";
 
     inline bool isConfigured()
     {
