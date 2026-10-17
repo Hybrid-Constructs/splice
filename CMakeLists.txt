@@ -79,6 +79,7 @@ juce_add_gui_app(Splice
     PRODUCT_NAME "Splice"
     COMPANY_NAME "Hybrid Constructs"
     BUNDLE_ID "com.hybridconstructs.splice"
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.png"
     DOCUMENT_EXTENSIONS "mp4;mov;m4v;avi;mkv;webm;mpg;mpeg")
 
 juce_generate_juce_header(Splice)
