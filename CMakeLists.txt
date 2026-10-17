@@ -110,6 +110,14 @@ endif()
 # ---------------------------------------------------------------------------
 # The app
 # ---------------------------------------------------------------------------
+# macOS gets the squircle with its margin and shadow baked in; Windows gets the
+# full-bleed one (same split artwork, see assets/*.svg).
+if(WIN32)
+    set(SPLICE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon-windows.png")
+else()
+    set(SPLICE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon-macos.png")
+endif()
+
 # DOCUMENT_EXTENSIONS writes CFBundleDocumentTypes into Info.plist, so the app
 # appears in Finder's "Open With" and accepts files dropped on its Dock icon.
 # (In-window drag-and-drop works without it — that's handled by the
@@ -119,7 +127,7 @@ juce_add_gui_app(Splice
     PRODUCT_NAME "Splice"
     COMPANY_NAME "Hybrid Constructs"
     BUNDLE_ID "com.hybridconstructs.splice"
-    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.png"
+    ICON_BIG "${SPLICE_ICON}"
     DOCUMENT_EXTENSIONS "mp4;mov;m4v;avi;mkv;webm;mpg;mpeg")
 
 juce_generate_juce_header(Splice)

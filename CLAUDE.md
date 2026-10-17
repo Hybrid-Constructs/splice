@@ -36,7 +36,10 @@ cmake --build build -j8
 ```
 
 JUCE defaults to `external/JUCE` (gitignored); point `-DSPLICE_JUCE_DIR=` at any
-other checkout to reuse one.
+other checkout to reuse one. Changing it on an existing build dir fails in
+juceaide ("source ... does not match the source ... used to generate cache"),
+because `build/JUCE` keeps the old path in its own sub-build cache: delete
+`build/JUCE` and reconfigure.
 
 `build-ffmpeg.sh` hard-fails if either the Hap or libx264 encoder didn't get
 enabled, so a missing dependency can't silently produce a build that fails at
@@ -242,6 +245,17 @@ without touching the encode path.
 been replaced by making the zones show the actual filenames instead, which is
 both smaller and clearer. The badge is the one concession, and it's limited to
 counts.
+
+## App icon
+
+Same split idea as HybridHub's icon: the square is two halves (app dark `#1b1d21`
+left, Splice blue `#4da3ff` right) with the down arrow (the one the empty drop
+zones draw) in the opposite color on each half. Two renderings of the same
+artwork, picked by `CMakeLists.txt` per platform: `assets/icon-macos.png` is a
+squircle on an 824px body in the 1024 canvas with a soft shadow, and
+`assets/icon-windows.png` fills the canvas with rounded corners. The `.svg` next
+to each is the source; re-render the PNG from it at 1024x1024 with a transparent
+background.
 
 ## Update check
 

@@ -1,6 +1,6 @@
 # Splice
 
-<img src="assets/icon.png" alt="Splice" width="128">
+<img src="assets/icon-macos.png" alt="Splice" width="128">
 
 Download: [hybridconstructs.com/splice](https://hybridconstructs.com/splice)
 
