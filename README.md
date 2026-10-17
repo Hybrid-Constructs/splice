@@ -2,7 +2,8 @@
 
 Takes two video files and combines them into a single **Hap Alpha** `.mov`:
 the **RGB** comes from the first clip, the **alpha** from the luminance of the
-second. Drag, drop, encode. Runs entirely locally — no network, no services.
+second. Drag, drop, encode. Encoding runs entirely locally. The only network call is a version check at
+startup (see *Update check* below).
 
 Hap was chosen over DXV deliberately: it's an open, BSD-licensed codec (Vidvox),
 Resolume/VDMX/Isadora play it natively, and FFmpeg has a real encoder for it, so
@@ -75,7 +76,7 @@ Stock FFmpeg builds (Homebrew's included) ship the Hap *decoder* but not the
 *encoder* — `hap_encoder` depends on external **libsnappy**, which most builds
 omit. `tools/build-ffmpeg.sh` configures a minimal static FFmpeg with just the
 Hap encoder and MOV muxer enabled. libsnappy links **statically**, so the built
-app has no external dylib dependencies and runs offline on any machine:
+app has no external dylib dependencies and runs on any machine:
 
 ```
 $ otool -L "Splice.app/Contents/MacOS/Splice" | grep -v /usr/lib | grep -v /System
@@ -123,3 +124,12 @@ RIGHT-half mean alpha: 255   <- matte white  -> opaque
 ```
 
 Confirming the RGB comes from the colour clip and the alpha from the matte.
+
+## Update check
+
+At launch Splice makes one anonymous `GET` to a public feed
+(`https://api.hybridconstructs.com/v2/public/updates/splice`) that returns the
+latest version number. No identifier, key or usage data is sent. If a newer
+version exists, an "Update to x.y.z" button appears that opens the download page
+in your browser. Nothing is downloaded or installed by the app. Any failure,
+such as being offline, is silently ignored.

@@ -196,6 +196,17 @@ MainComponent::MainComponent()
     joinTab.setConnectedEdges (juce::Button::ConnectedOnRight);
     splitTab.setConnectedEdges (juce::Button::ConnectedOnLeft);
 
+    updateButton.setColour (juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    updateButton.setColour (juce::TextButton::textColourOffId, accentColour);
+    updateButton.onClick = [] { juce::URL (UpdateConfig::downloadUrl).launchInDefaultBrowser(); };
+    addChildComponent (updateButton);
+
+    updateChecker.check (JUCE_APPLICATION_VERSION_STRING, [this] (const juce::String& latest)
+    {
+        updateButton.setButtonText ("Update to " + latest);
+        updateButton.setVisible (true);
+    });
+
     // Quality only affects the mp4s the splitter writes.
     quality.setRange (0.0, 1.0, 0.01);
     quality.setValue (0.75, juce::dontSendNotification);
@@ -397,6 +408,7 @@ void MainComponent::resized()
     auto tabs = tabRow.withSizeKeepingCentre (tabWidth, tabRow.getHeight());
     joinTab.setBounds (tabs.removeFromLeft (tabWidth / 2));
     splitTab.setBounds (tabs);
+    updateButton.setBounds (tabRow.removeFromRight (juce::jmax (0, (tabRow.getWidth() - tabWidth) / 2)));
 
     area.removeFromTop (14);
 

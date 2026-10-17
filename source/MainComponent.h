@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "JobScanner.h"
 #include "BatchRunner.h"
+#include "UpdateChecker.h"
 
 /**
     One half of the RGB / A pair display. Shows its letter when empty and a
@@ -127,6 +128,10 @@ private:
 
     juce::TextButton joinTab  { "Join" };
     juce::TextButton splitTab { "Split" };
+
+    // Shown only when the update feed reports a newer version.
+    juce::TextButton updateButton;
+    UpdateChecker updateChecker;
     juce::Slider quality { juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
     juce::TextButton renderButton { "Render" };
     SplitTextProgressLookAndFeel progressLook;

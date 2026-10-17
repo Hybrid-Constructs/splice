@@ -89,7 +89,8 @@ target_sources(Splice PRIVATE
     source/HapEncoder.cpp
     source/HapSplitter.cpp
     source/JobScanner.cpp
-    source/BatchRunner.cpp)
+    source/BatchRunner.cpp
+    source/UpdateChecker.cpp)
 
 target_include_directories(Splice PRIVATE source)
 

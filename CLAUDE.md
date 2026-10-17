@@ -15,8 +15,9 @@ It exists so a colour pass and a separately-rendered matte pass can be married
 into one clip Resolume/VDMX play directly on the GPU — and taken apart again for
 editing in tools that don't handle alpha.
 
-Small, single-window, fully offline — no network calls, no services, no
-external runtime dependencies.
+Small, single-window, no services, no external runtime dependencies. The one
+network call is the update check (see *Update check* below); encoding is fully
+local.
 
 Not currently part of the `hybrid.code-workspace` roots; it's a standalone tool
 that borrows the JUCE checkout from the sibling `hybridffgl` repo.
@@ -182,6 +183,28 @@ without touching the encode path.
 been replaced by making the zones show the actual filenames instead, which is
 both smaller and clearer. The badge is the one concession, and it's limited to
 counts.
+
+## Update check
+
+`UpdateChecker` makes a single anonymous `GET` to the public feed
+`/v2/public/updates/splice` on the Hybrid Constructs API (`UpdateConfig::feedUrl`)
+and compares the returned version with the running one (`isNewerVersion`, plain
+dotted-integer compare). If newer, `MainComponent` shows an "Update to x.y.z"
+button in the tab row that opens `UpdateConfig::downloadUrl` in the browser. It
+never downloads or installs anything.
+
+- The app is open source, so it carries **no API key**. The feed is deliberately
+  unauthenticated and returns only a version number, with no URLs from the server
+  that the app follows. Keep it that way: don't add a key, and don't make the app
+  open a URL taken from the response.
+- **`downloadUrl` empty means the check is off:** no request, no button. Set it
+  to switch the feature on.
+- Failures (offline, timeout, bad JSON, 404 before a version is published) all
+  read as "no update"; there is no error UI by design.
+- The running version comes from `JUCE_APPLICATION_VERSION_STRING`, i.e. the CMake
+  `project(VERSION)`. Bump it there; `Main.cpp` no longer hardcodes it.
+- The check runs on a thread; the destructor cancels the in-flight `WebInputStream`
+  so quitting never waits on a slow connection.
 
 ## Critical gotchas
 
