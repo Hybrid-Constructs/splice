@@ -19,17 +19,22 @@ Small, single-window, no services, no external runtime dependencies. The one
 network call is the update check (see *Update check* below); encoding is fully
 local.
 
-Not currently part of the `hybrid.code-workspace` roots; it's a standalone tool
-that borrows the JUCE checkout from the sibling `hybridffgl` repo.
+This repo is public and self-contained: everything needed to build it is here or
+fetched from public upstreams. Keep it that way, and keep internal infrastructure
+details (signing, release pipeline, other repos) out of this file.
 
 ## Build
 
 ```bash
 brew install snappy x264 pkg-config   # build-time only (see gotchas)
 ./tools/build-ffmpeg.sh               # one-time, ~10 min
+git clone --depth 1 --branch 8.0.7 https://github.com/juce-framework/JUCE external/JUCE
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j8
 ```
+
+JUCE defaults to `external/JUCE` (gitignored); point `-DSPLICE_JUCE_DIR=` at any
+other checkout to reuse one.
 
 `build-ffmpeg.sh` hard-fails if either the Hap or libx264 encoder didn't get
 enabled, so a missing dependency can't silently produce a build that fails at
@@ -62,9 +67,7 @@ binary). That was abandoned on purpose. Don't resurrect it.
 Homebrew FFmpeg — see the libsnappy gotcha below.
 
 The configure line disables all encoders/muxers and re-enables only
-`hap` + `mov`, keeping the static libs small. This mirrors the approach in
-[hybridffgl's testbed](../hybridffgl/tools/testbed/CMakeLists.txt), which builds
-FFmpeg the same way via `ExternalProject` (different codec set: `mpeg4`/`mp4`).
+`hap` + `mov`, keeping the static libs small.
 
 ### Threading and ownership
 
@@ -211,7 +214,7 @@ never downloads or installs anything.
 ### `hasFileExtension` takes bare extensions, not globs
 
 `juce::File::hasFileExtension("*.mp4")` **never matches**. It's a suffix
-compare ([juce_File.cpp:694](../hybridffgl/submodules/JUCE/modules/juce_core/files/juce_File.cpp#L694)),
+compare (`juce_File.cpp`, `File::hasFileExtension`),
 not a wildcard match — it accepts `"mp4"` or `".mp4"`, and a leading `*` breaks it.
 
 `juce::FileChooser` wants the exact opposite (glob patterns). So
@@ -250,7 +253,7 @@ Note CMake caches `SNAPPY_LIBRARY`; after changing that logic, clear it with
 FFmpeg's `configure` can't emit a universal binary in one pass, so the static
 libs are host-arch only and the app target is pinned to match via
 `OSX_ARCHITECTURES`. A universal build would need two FFmpeg trees and a
-`lipo` step. Same constraint the hybridffgl testbed documents.
+`lipo` step.
 
 **Windows is not yet wired up.** Nothing in the app code is macOS-specific —
 JUCE, FFmpeg, libx264 and libsnappy all build there — but `tools/build-ffmpeg.sh`
@@ -258,13 +261,9 @@ is bash and FFmpeg's `configure` can't run natively on Windows. It needs either
 an MSYS2 path or prebuilt static libs, plus replacing the `-framework`/`brew`
 assumptions in `CMakeLists.txt`.
 
-**There is no recipe to copy from the other repos.** hybridffgl's testbed wraps
-its whole FFmpeg block in `if(NOT WIN32)` and drops video support on Windows —
-fine there, because the testbed still loads plugins without it, but useless here
-since decoding *is* the app. The `vcpkg_acquire_dependencies()` call in
-hybridffgl's root `CMakeLists.txt` is vestigial: it's guarded on a cache
-variable that is never set. Pulse vendors a prebuilt SDK (Steinberg ASIO), which
-is the closest precedent for the prebuilt-libs route.
+There is no existing recipe to copy for this: dropping video support on Windows
+isn't an option here, since decoding *is* the app, so a Windows port means the
+MSYS2 or prebuilt-static-libs route.
 
 ### Hap requires 4×4 blocks
 
@@ -280,20 +279,13 @@ playback is cheap on the GPU.
 
 ## Releases
 
-`.github/workflows/build-release.yml` calls the shared
-[build-standalone-app](../github-actions/CLAUDE.md) workflow with
-`skip-dmg: true` and `skip-installer: true`. That's the **portable app** model:
-the workflow zips the signed `.app` and `.exe` directly instead of building a
-DMG or a WiX bundle, so no installer assets live in this repo. Signing still
-happens — Azure Trusted Signing on Windows, codesign + notarytool on macOS.
+Official binaries are built from tagged commits of this repository. Release
+notes should name the tag a binary was built from, so the corresponding source
+is always identifiable (see [LICENSE.md](LICENSE.md)).
 
-This suits the app: one window, no file associations, no updater, nothing to
-register with the OS. If it ever needs those, drop the two flags and add the
-`Installer/` tree the other apps have.
-
-GPL compliance for published binaries is satisfied by the repo being public;
-release notes should name the tag a binary was built from. See
-[LICENSE.md](LICENSE.md).
+`.github/workflows/ci.yml` is a build-and-lint check only: GitHub-hosted runners,
+read-only token, no secrets, no signing, no publishing. Don't add secrets,
+self-hosted runners, `pull_request_target`, or private submodules/URLs here.
 
 ## Verification
 
@@ -333,14 +325,3 @@ produces plain Hap (`Hap1`, no alpha) and everything else still looks fine.
 Sampling both halves is what actually proves alpha is routed from the *matte*
 and not from the colour clip — using one clip for both inputs can't distinguish
 the two.
-
-## Connections
-
-- Borrows the JUCE checkout from [hybridffgl](../hybridffgl/CLAUDE.md)
-  (`submodules/JUCE`) rather than cloning a second copy; override with
-  `-DSPLICE_JUCE_DIR=`.
-- The FFmpeg-from-source + static-link + host-arch-pinning pattern is shared
-  with hybridffgl's [FFGL Testbed](../hybridffgl/tools/testbed/CMakeLists.txt),
-  which is the reference implementation for it in this constellation.
-- Produces clips intended for the same Resolume pipeline that
-  [chaser](../chaser/CLAUDE.md) and [stageflow](../stageflow/CLAUDE.md) target.

@@ -1,0 +1,73 @@
+name: CI
+
+# Public-repo CI. Deliberately boring and powerless:
+#   - GitHub-hosted runners only
+#   - read-only token, nothing that needs credentials
+#   - builds unsigned and publishes nothing
+# Signing, notarization and distribution happen in a separate private repo that
+# pins a tag of this one. tools/leak-lint.sh fails the build if this file ever
+# grows a credential reference, a self-hosted runner or a cross-repo workflow.
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Leak lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Tree only: the first commit predates these rules, so --history (an
+      # on-demand audit) would fail forever. gitleaks below covers history.
+      - name: Repo policy checks
+        run: tools/leak-lint.sh
+
+      - name: Scan for secrets (gitleaks)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 \
+            detect --source /repo --redact --no-banner --verbose
+
+  build:
+    name: Build (macOS, unsigned)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: brew install snappy x264 pkg-config
+
+      - name: Cache static FFmpeg
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: external/ffmpeg-install
+          key: ffmpeg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-ffmpeg.sh') }}
+
+      - name: Build FFmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: ./tools/build-ffmpeg.sh
+
+      - name: Fetch JUCE
+        run: git clone --depth 1 --branch 8.0.7 https://github.com/juce-framework/JUCE external/JUCE
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j 4

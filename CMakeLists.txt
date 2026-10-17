@@ -10,17 +10,18 @@ if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 # ---------------------------------------------------------------------------
-# JUCE. By default we reuse the checkout that already exists in the sibling
-# hybridffgl repo so this project doesn't clone a second copy; point
-# SPLICE_JUCE_DIR somewhere else to override.
+# JUCE. Expected at external/JUCE (see README for the one-line clone); point
+# SPLICE_JUCE_DIR somewhere else to reuse an existing checkout.
 # ---------------------------------------------------------------------------
-set(SPLICE_JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../hybridffgl/submodules/JUCE"
+set(SPLICE_JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE"
     CACHE PATH "Path to a JUCE framework checkout")
 
 if(NOT EXISTS "${SPLICE_JUCE_DIR}/CMakeLists.txt")
     message(FATAL_ERROR
-        "JUCE not found at ${SPLICE_JUCE_DIR}. "
-        "Set -DSPLICE_JUCE_DIR=/path/to/JUCE.")
+        "JUCE not found at ${SPLICE_JUCE_DIR}. Either run:\n"
+        "  git clone --depth 1 --branch 8.0.7 "
+        "https://github.com/juce-framework/JUCE external/JUCE\n"
+        "or set -DSPLICE_JUCE_DIR=/path/to/JUCE.")
 endif()
 
 add_subdirectory("${SPLICE_JUCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE" EXCLUDE_FROM_ALL)

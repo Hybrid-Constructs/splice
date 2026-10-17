@@ -57,6 +57,7 @@ Needs CMake, Xcode command line tools, and a JUCE checkout. One-time setup:
 ```bash
 brew install snappy x264 pkg-config   # build-time only; link statically
 ./tools/build-ffmpeg.sh               # ~10 min, static FFmpeg with Hap + libx264
+git clone --depth 1 --branch 8.0.7 https://github.com/juce-framework/JUCE external/JUCE
 ```
 
 Then:
@@ -68,8 +69,7 @@ cmake --build build -j8
 
 Output: `build/Splice_artefacts/Debug/Splice.app`.
 
-By default JUCE is reused from the sibling `hybridffgl/submodules/JUCE` checkout
-rather than cloning a second copy. Override with
+JUCE is expected at `external/JUCE`. To reuse a checkout you already have, pass
 `-DSPLICE_JUCE_DIR=/path/to/JUCE`.
 
 ### Why a custom FFmpeg build

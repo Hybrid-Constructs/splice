@@ -2,3 +2,6 @@ build/
 external/ffmpeg-src/
 external/ffmpeg-install/
 .DS_Store
+external/JUCE/
+.claude/
+CLAUDE.local.md
