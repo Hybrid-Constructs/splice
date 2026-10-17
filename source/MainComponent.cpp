@@ -43,7 +43,7 @@ void DropZone::paint (juce::Graphics& g)
     g.setColour (dragging ? accentColour.withAlpha (0.18f) : panelColour);
     g.fillRoundedRectangle (bounds, 10.0f);
 
-    // Dashed while empty, solid once filled — the only state cue there is.
+    // Dashed while empty, solid once filled.
     if (! hasContent && ! dragging)
     {
         g.setColour (juce::Colours::white.withAlpha (0.14f));
@@ -66,9 +66,35 @@ void DropZone::paint (juce::Graphics& g)
 
     if (! hasContent)
     {
+        // A down arrow stacked over the letter, centred as one block. Same
+        // arrow as the app sketch on the Splice web page.
+        const float arrowSize    = side_ * 0.26f;
+        const float letterHeight = side_ * 0.22f;
+        const float gap          = side_ * 0.03f;
+
+        auto stack = getLocalBounds().toFloat()
+                         .withSizeKeepingCentre ((float) getWidth(), arrowSize + gap + letterHeight);
+        const auto arrowArea = stack.removeFromTop (arrowSize).withSizeKeepingCentre (arrowSize, arrowSize);
+        stack.removeFromTop (gap);
+
+        // Drawn on a 48-unit grid, then scaled to the zone.
+        const float unit = arrowSize / 48.0f;
+        juce::Path arrow;
+        arrow.startNewSubPath (24.0f, 10.0f);
+        arrow.lineTo (24.0f, 32.0f);
+        arrow.startNewSubPath (14.0f, 24.0f);
+        arrow.lineTo (24.0f, 34.0f);
+        arrow.lineTo (34.0f, 24.0f);
+        arrow.applyTransform (juce::AffineTransform::scale (unit)
+                                  .translated (arrowArea.getX(), arrowArea.getY()));
+
+        g.setColour (accentColour);
+        g.strokePath (arrow, juce::PathStrokeType (5.0f * unit, juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::rounded));
+
         g.setColour (dragging ? accentColour : dimTextColour);
-        g.setFont (juce::FontOptions (side_ * 0.3f, juce::Font::bold));
-        g.drawText (letter, getLocalBounds(), juce::Justification::centred, false);
+        g.setFont (juce::FontOptions (letterHeight, juce::Font::bold));
+        g.drawText (letter, stack, juce::Justification::centred, false);
         return;
     }
 
@@ -215,6 +241,8 @@ MainComponent::MainComponent()
     quality.setColour (juce::Slider::thumbColourId, accentColour);
     addChildComponent (quality);
 
+    renderLook.disabledFillColour = panelColour;
+    renderButton.setLookAndFeel (&renderLook);
     renderButton.setColour (juce::TextButton::buttonColourId, accentColour);
     renderButton.setColour (juce::TextButton::textColourOnId, juce::Colours::black);
     renderButton.setColour (juce::TextButton::textColourOffId, juce::Colours::black);
@@ -257,6 +285,7 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     progressBar.setLookAndFeel (nullptr);
+    renderButton.setLookAndFeel (nullptr);
     batch.onProgress   = nullptr;
     batch.onJobStarted = nullptr;
     batch.onFinished   = nullptr;

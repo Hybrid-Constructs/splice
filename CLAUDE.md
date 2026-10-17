@@ -177,6 +177,12 @@ polling can go — but don't reintroduce a wait on a `callAsync` callback.
 Two square drop zones (`RGB` and `A`), a mode tab pair, a badge, and a Render
 button. Split mode hides the matte zone and reveals the quality slider.
 
+Empty zones draw an accent-blue down arrow over their letter, the same arrow
+(48-unit path, stroke 5) as the app sketch on the Splice web page; keep the two
+alike. Render uses `GreyWhenDisabledLookAndFeel`, so while disabled it's solid
+panel grey rather than JUCE's stock half-alpha accent, which read as a faded
+version of the live button.
+
 `HapEncoder::Settings` still carries `matteChannel`, `lengthMode` and
 `invertMatte`, which simply take their defaults (luminance / shortest / no
 invert). The encoder API is deliberately left intact so those can be re-surfaced

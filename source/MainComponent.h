@@ -6,8 +6,8 @@
 #include "UpdateChecker.h"
 
 /**
-    One half of the RGB / A pair display. Shows its letter when empty and a
-    filename once it's holding one side of a job.
+    One half of the RGB / A pair display. Shows a drop arrow over its letter
+    when empty and a filename once it's holding one side of a job.
 
     Any drop lands here — a single file, a folder, a zip, a multi-file selection
     — and is handed up whole; MainComponent decides whether it set one side or
@@ -98,6 +98,47 @@ public:
     }
 };
 
+/**
+    Button look that draws the disabled state as solid grey rather than the
+    stock look's half-alpha button colour, which left a disabled accent button
+    reading as a faded version of the live one.
+*/
+class GreyWhenDisabledLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    juce::Colour disabledFillColour { 0xff26292f };
+    juce::Colour disabledTextColour { 0xff5c6168 };
+
+    void drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour,
+                               bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        if (button.isEnabled())
+        {
+            juce::LookAndFeel_V4::drawButtonBackground (g, button, backgroundColour,
+                                                        shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+            return;
+        }
+
+        g.setColour (disabledFillColour);
+        g.fillRoundedRectangle (button.getLocalBounds().toFloat().reduced (0.5f), 6.0f);
+    }
+
+    void drawButtonText (juce::Graphics& g, juce::TextButton& button,
+                         bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        if (button.isEnabled())
+        {
+            juce::LookAndFeel_V4::drawButtonText (g, button, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+            return;
+        }
+
+        g.setFont (getTextButtonFont (button, button.getHeight()));
+        g.setColour (disabledTextColour);
+        g.drawFittedText (button.getButtonText(), button.getLocalBounds(),
+                          juce::Justification::centred, 1);
+    }
+};
+
 class MainComponent : public juce::Component
 {
 public:
@@ -133,6 +174,7 @@ private:
     juce::TextButton updateButton;
     UpdateChecker updateChecker;
     juce::Slider quality { juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
+    GreyWhenDisabledLookAndFeel renderLook;
     juce::TextButton renderButton { "Render" };
     SplitTextProgressLookAndFeel progressLook;
     juce::ProgressBar progressBar { progress };
