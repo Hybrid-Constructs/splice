@@ -53,6 +53,50 @@ private:
 
 //==============================================================================
 
+/**
+    Progress bar look whose percentage stays legible as the fill sweeps under
+    it: the text is drawn once in `onFillColour` clipped to the filled part and
+    once in `offFillColour` clipped to the remainder, so the colour flips
+    exactly at the fill edge instead of one colour covering the whole bar.
+*/
+class SplitTextProgressLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    juce::Colour onFillColour  { juce::Colours::black };
+    juce::Colour offFillColour { 0xff5598e0 };  // the stock look's muted blue
+
+    void drawProgressBar (juce::Graphics& g, juce::ProgressBar& bar, int width, int height,
+                          double progress, const juce::String& textToShow) override
+    {
+        // Track + fill (and the indeterminate stripes) from the stock look, minus its text.
+        juce::LookAndFeel_V4::drawProgressBar (g, bar, width, height, progress, {});
+
+        if (textToShow.isEmpty())
+            return;
+
+        const juce::Rectangle<int> bounds (0, 0, width, height);
+        const int fillX = progress >= 0.0 && progress <= 1.0
+                              ? juce::roundToInt ((double) width * progress)
+                              : 0;
+
+        g.setFont ((float) height * 0.6f);
+
+        {
+            juce::Graphics::ScopedSaveState s (g);
+            g.reduceClipRegion (bounds.withWidth (fillX));
+            g.setColour (onFillColour);
+            g.drawText (textToShow, bounds, juce::Justification::centred, false);
+        }
+
+        {
+            juce::Graphics::ScopedSaveState s (g);
+            g.reduceClipRegion (bounds.withTrimmedLeft (fillX));
+            g.setColour (offFillColour);
+            g.drawText (textToShow, bounds, juce::Justification::centred, false);
+        }
+    }
+};
+
 class MainComponent : public juce::Component
 {
 public:
@@ -85,6 +129,7 @@ private:
     juce::TextButton splitTab { "Split" };
     juce::Slider quality { juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
     juce::TextButton renderButton { "Render" };
+    SplitTextProgressLookAndFeel progressLook;
     juce::ProgressBar progressBar { progress };
 
     double progress = 0.0;

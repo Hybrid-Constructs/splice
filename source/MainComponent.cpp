@@ -212,6 +212,7 @@ MainComponent::MainComponent()
 
     progressBar.setColour (juce::ProgressBar::backgroundColourId, panelColour);
     progressBar.setColour (juce::ProgressBar::foregroundColourId, accentColour);
+    progressBar.setLookAndFeel (&progressLook);
     addChildComponent (progressBar);
 
     batch.onProgress = [this] (double p) { progress = p < 0.0 ? -1.0 : p; };
@@ -244,6 +245,7 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    progressBar.setLookAndFeel (nullptr);
     batch.onProgress   = nullptr;
     batch.onJobStarted = nullptr;
     batch.onFinished   = nullptr;
