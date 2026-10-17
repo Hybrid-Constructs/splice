@@ -248,7 +248,7 @@ counts.
 
 ## App icon
 
-Same split idea as HybridHub's icon: the square is two halves (app dark `#1b1d21`
+Same split idea as the other Hybrid Constructs app icons: the square is two halves (app dark `#1b1d21`
 left, Splice blue `#4da3ff` right) with the down arrow (the one the empty drop
 zones draw) in the opposite color on each half. Two renderings of the same
 artwork, picked by `CMakeLists.txt` per platform: `assets/icon-macos.png` is a
