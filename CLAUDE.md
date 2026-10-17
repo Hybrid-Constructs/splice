@@ -25,6 +25,8 @@ details (signing, release pipeline, other repos) out of this file.
 
 ## Build
 
+### macOS
+
 ```bash
 brew install snappy x264 pkg-config   # build-time only (see gotchas)
 ./tools/build-ffmpeg.sh               # one-time, ~10 min
@@ -44,8 +46,33 @@ exits before configuring anything.
 Output: `build/Splice_artefacts/Debug/Splice.app`. Debug is the default per
 the workspace convention; single-config generator, so reuse the one `build/`.
 
-No automated test suite (matching the other apps here) — see *Verification*
-below for how the encode path was actually proven.
+### Windows
+
+```powershell
+git clone https://github.com/microsoft/vcpkg
+.\vcpkg\bootstrap-vcpkg.bat
+$env:VCPKG_ROOT = "$PWD\vcpkg"          # one-time per shell/session
+cmake --preset windows
+cmake --build build
+```
+
+FFmpeg comes from vcpkg's `ffmpeg` port (`vcpkg.json`), not from
+`tools/build-ffmpeg.sh` — that script is bash and FFmpeg's `./configure` can't
+run under MSVC. See *Architecture decisions → FFmpeg sourcing differs by
+platform* below for why. `CMakePresets.json`'s `windows` preset wires up
+Ninja + the vcpkg toolchain file + the `x64-windows-static` triplet in one
+shot; the manual equivalent is
+`cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static`.
+
+Output: `build/Splice_artefacts/Debug/Splice.exe`.
+
+**Verified so far:** configures, compiles, links (Debug, VS 2022 + vcpkg) and
+launches; `dumpbin /dependents` shows only system DLLs (no FFmpeg or VC++
+runtime). **Not yet verified:** the encode path on Windows - run the
+*Verification* procedure below before trusting output.
+
+No automated test suite on either platform (matching the other apps here) —
+see *Verification* below for how the encode path was actually proven.
 
 ## Architecture decisions
 
@@ -60,7 +87,7 @@ An earlier pass had gone some way into DXV3 (its frame header layout is readable
 from FFmpeg's `libavcodec/dxv.c`, and the fourccs are visible in Arena's
 binary). That was abandoned on purpose. Don't resurrect it.
 
-### FFmpeg is vendored and built from source
+### FFmpeg is vendored and built from source — on macOS
 
 `tools/build-ffmpeg.sh` builds a minimal static FFmpeg into
 `external/ffmpeg-install`. It is **not** interchangeable with a system or
@@ -68,6 +95,29 @@ Homebrew FFmpeg — see the libsnappy gotcha below.
 
 The configure line disables all encoders/muxers and re-enables only
 `hap` + `mov`, keeping the static libs small.
+
+### FFmpeg sourcing differs by platform, on purpose
+
+macOS builds FFmpeg from source via `./configure` (above). Windows instead
+takes FFmpeg from **vcpkg**'s `ffmpeg` port (`vcpkg.json`, `snappy` + `x264` +
+`gpl` features). This is an intentional asymmetry, not an inconsistency to
+"fix":
+
+- FFmpeg's `./configure` needs a POSIX-ish shell and can't run under MSVC.
+  Building it via MSYS2/MinGW instead was considered and rejected: the app
+  links with pure MSVC, and mixing MinGW-built static libs into an MSVC-linked
+  executable risks a CRT/ABI mismatch that nothing here could prove out.
+  vcpkg's port builds FFmpeg with MSVC itself, so the object code is
+  ABI-compatible with the rest of the app.
+- Consequence: vcpkg's port has no equivalent of `--disable-encoders` /
+  `--disable-muxers`, so the Windows static libs carry FFmpeg's full default
+  encoder/muxer set rather than the narrow `hap`+`mov`+`libx264`+`mp4` selection
+  the macOS build hand-picks. Bigger static footprint on Windows; harmless
+  otherwise since only the Hap/x264/mov/mp4 code paths are ever exercised.
+- The Hap encoder itself isn't behind a vcpkg feature flag — it's in FFmpeg's
+  default encoder set. It only needs `libsnappy` to actually be enabled, which
+  is what the `snappy` feature in `vcpkg.json` supplies (vcpkg's port docs it
+  explicitly as "needed for hap encoding").
 
 ### Threading and ownership
 
@@ -254,22 +304,24 @@ otool -L "build/Splice_artefacts/Debug/Splice.app/Contents/MacOS/Splice" \
 Note CMake caches `SNAPPY_LIBRARY`; after changing that logic, clear it with
 `cmake -B build -U SNAPPY_LIBRARY` or the old dylib path silently persists.
 
-### Single-arch only, and macOS-only for now
+### macOS build is single-arch only
 
 FFmpeg's `configure` can't emit a universal binary in one pass, so the static
 libs are host-arch only and the app target is pinned to match via
 `OSX_ARCHITECTURES`. A universal build would need two FFmpeg trees and a
-`lipo` step.
+`lipo` step. This doesn't apply to the Windows build - vcpkg's
+`x64-windows-static` triplet is a fixed architecture already, nothing to pin.
 
-**Windows is not yet wired up.** Nothing in the app code is macOS-specific —
-JUCE, FFmpeg, libx264 and libsnappy all build there — but `tools/build-ffmpeg.sh`
-is bash and FFmpeg's `configure` can't run natively on Windows. It needs either
-an MSYS2 path or prebuilt static libs, plus replacing the `-framework`/`brew`
-assumptions in `CMakeLists.txt`.
+### Windows support
 
-There is no existing recipe to copy for this: dropping video support on Windows
-isn't an option here, since decoding *is* the app, so a Windows port means the
-MSYS2 or prebuilt-static-libs route.
+Wired up via vcpkg rather than mirroring the macOS `build-ffmpeg.sh` approach
+(see *FFmpeg sourcing differs by platform, on purpose* above for why). Nothing
+in the app code is platform-specific (JUCE, FFmpeg, libx264 and libsnappy all
+build fine on Windows); the divergence is entirely in how FFmpeg's static libs
+get built, contained to `vcpkg.json` and the `WIN32`/`APPLE` branches in
+`CMakeLists.txt`. Dropping video support on Windows isn't an option, since
+decoding *is* the app, and prebuilt MinGW libs were rejected for the CRT/ABI
+reason above.
 
 ### Hap requires 4×4 blocks
 
@@ -292,6 +344,10 @@ is always identifiable (see [LICENSE.md](LICENSE.md)).
 `.github/workflows/ci.yml` is a build-and-lint check only: GitHub-hosted runners,
 read-only token, no secrets, no signing, no publishing. Don't add secrets,
 self-hosted runners, `pull_request_target`, or private submodules/URLs here.
+
+CI builds both platforms: macOS (`build`) and Windows (`build-windows`, vcpkg via
+the `windows` preset on the runner's preinstalled vcpkg, binary cache keyed on
+`vcpkg.json`). Neither has run on GitHub yet.
 
 ## Verification
 

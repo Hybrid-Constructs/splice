@@ -95,10 +95,10 @@ $ otool -L "Splice.app/Contents/MacOS/Splice" | grep -v /usr/lib | grep -v /Syst
 ## Notes and limitations
 
 - **macOS / arm64.** FFmpeg's configure can't emit a universal binary in one
-  pass, so the app is pinned to the host arch. Windows isn't wired up yet: the
-  app code is portable, but `tools/build-ffmpeg.sh` is bash and FFmpeg's
-  `configure` can't run natively there, so it needs an MSYS2 or prebuilt-libs
-  path plus changes to the `-framework`/`brew` assumptions in `CMakeLists.txt`.
+  pass, so the app is pinned to the host arch.
+- **Windows.** FFmpeg, x264 and snappy come from vcpkg rather than
+  `tools/build-ffmpeg.sh`. Set `VCPKG_ROOT`, then
+  `cmake --preset windows && cmake --build build`.
 - Hap works on 4×4 texture blocks, so output dimensions are rounded **up** to a
   multiple of 4; the padding rows/columns are written fully transparent.
 - Hap Alpha is DXT5, which is lossy block compression — alpha is quantised, so

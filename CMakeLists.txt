@@ -9,6 +9,13 @@ if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "" FORCE)
 endif()
 
+# The x64-windows-static vcpkg triplet builds FFmpeg/x264/snappy against the
+# static CRT (/MT), so the app must match or the link fails with LNK2038.
+# Bonus: the portable .exe then needs no VC++ redistributable.
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # ---------------------------------------------------------------------------
 # JUCE. Expected at external/JUCE (see README for the one-line clone); point
 # SPLICE_JUCE_DIR somewhere else to reuse an existing checkout.
@@ -27,45 +34,77 @@ endif()
 add_subdirectory("${SPLICE_JUCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE" EXCLUDE_FROM_ALL)
 
 # ---------------------------------------------------------------------------
-# FFmpeg. Static libs built by tools/build-ffmpeg.sh, which configures the Hap
-# encoder and MOV muxer in (stock Homebrew FFmpeg has no Hap *encoder*).
+# FFmpeg.
+#
+# macOS: static libs built by tools/build-ffmpeg.sh, which configures just the
+# Hap encoder and MOV muxer in (stock Homebrew FFmpeg has no Hap *encoder*).
+#
+# Windows: FFmpeg's ./configure can't run under MSVC, and this workspace has
+# no MinGW precedent (mixing MinGW-built .a archives into an MSVC-linked .exe
+# is a CRT/ABI risk with nothing here to prove it out) — so Windows instead
+# takes FFmpeg from vcpkg's MSVC-native port (see vcpkg.json; run through
+# `cmake --preset windows` or pass -DCMAKE_TOOLCHAIN_FILE yourself). vcpkg
+# builds FFmpeg's full default encoder/muxer set rather than the narrow one
+# build-ffmpeg.sh selects — bigger static footprint, but the port has no
+# equivalent of --disable-encoders, and the Hap encoder is in the default set
+# regardless, gated only on the "snappy" feature (which vcpkg.json enables).
 # ---------------------------------------------------------------------------
-set(SPLICE_FFMPEG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg-install"
-    CACHE PATH "Prefix of a static FFmpeg build with the Hap encoder enabled")
+if(WIN32)
+    find_package(FFMPEG REQUIRED)
 
-if(NOT EXISTS "${SPLICE_FFMPEG_DIR}/lib/libavcodec.a")
-    message(FATAL_ERROR
-        "FFmpeg not found at ${SPLICE_FFMPEG_DIR}. Run tools/build-ffmpeg.sh first.")
-endif()
+    foreach(lib avformat avcodec avutil swscale swresample)
+        add_library(ffmpeg::${lib} INTERFACE IMPORTED)
+    endforeach()
+    # FFMPEG_LIBRARIES carries optimized/debug keywords, which are illegal in a
+    # raw INTERFACE_LINK_LIBRARIES property but understood by
+    # target_link_libraries.
+    target_include_directories(ffmpeg::avformat INTERFACE ${FFMPEG_INCLUDE_DIRS})
+    target_link_libraries(ffmpeg::avformat INTERFACE ${FFMPEG_LIBRARIES})
 
-foreach(lib avformat avcodec avutil swscale swresample)
-    add_library(ffmpeg::${lib} STATIC IMPORTED)
-    set_target_properties(ffmpeg::${lib} PROPERTIES
-        IMPORTED_LOCATION "${SPLICE_FFMPEG_DIR}/lib/lib${lib}.a"
-        INTERFACE_INCLUDE_DIRECTORIES "${SPLICE_FFMPEG_DIR}/include")
-endforeach()
+    # vcpkg's port pulls libsnappy and libx264 in as transitive static deps of
+    # avcodec (via its own find_package(Snappy)/find_package(X264) calls), so
+    # FFMPEG_LIBRARIES already carries them — nothing extra to link here.
+    set(SNAPPY_LIBRARY "")
+    set(X264_LIBRARY "")
+else()
+    set(SPLICE_FFMPEG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg-install"
+        CACHE PATH "Prefix of a static FFmpeg build with the Hap encoder enabled")
 
-# libsnappy is what the Hap encoder compresses its texture chunks with. Ask for
-# the static archive by name: a plain `snappy` would resolve to the Homebrew
-# dylib and the bundle would then refuse to launch anywhere Homebrew isn't
-# installed. Static keeps the app self-contained and fully offline.
-find_library(SNAPPY_LIBRARY NAMES libsnappy.a
-    PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+    if(NOT EXISTS "${SPLICE_FFMPEG_DIR}/lib/libavcodec.a")
+        message(FATAL_ERROR
+            "FFmpeg not found at ${SPLICE_FFMPEG_DIR}. Run tools/build-ffmpeg.sh first.")
+    endif()
 
-if(NOT SNAPPY_LIBRARY)
-    message(FATAL_ERROR
-        "Static libsnappy.a not found. Install it with: brew install snappy")
-endif()
+    foreach(lib avformat avcodec avutil swscale swresample)
+        add_library(ffmpeg::${lib} STATIC IMPORTED)
+        set_target_properties(ffmpeg::${lib} PROPERTIES
+            IMPORTED_LOCATION "${SPLICE_FFMPEG_DIR}/lib/lib${lib}.a"
+            INTERFACE_INCLUDE_DIRECTORIES "${SPLICE_FFMPEG_DIR}/include")
+    endforeach()
 
-# libx264 encodes the two .mp4s the splitter writes. Static, same reasoning as
-# libsnappy above. NOTE: x264 is GPL, so the built app as a whole is GPL —
-# see the licence note in README.md.
-find_library(X264_LIBRARY NAMES libx264.a
-    PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+    # libsnappy is what the Hap encoder compresses its texture chunks with. Ask
+    # for the static archive by name: a plain `snappy` would resolve to the
+    # Homebrew dylib and the bundle would then refuse to launch anywhere
+    # Homebrew isn't installed. Static keeps the app self-contained and fully
+    # offline.
+    find_library(SNAPPY_LIBRARY NAMES libsnappy.a
+        PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
 
-if(NOT X264_LIBRARY)
-    message(FATAL_ERROR
-        "Static libx264.a not found. Install it with: brew install x264")
+    if(NOT SNAPPY_LIBRARY)
+        message(FATAL_ERROR
+            "Static libsnappy.a not found. Install it with: brew install snappy")
+    endif()
+
+    # libx264 encodes the two .mp4s the splitter writes. Static, same reasoning
+    # as libsnappy above. NOTE: x264 is GPL, so the built app as a whole is
+    # GPL — see the licence note in README.md.
+    find_library(X264_LIBRARY NAMES libx264.a
+        PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+
+    if(NOT X264_LIBRARY)
+        message(FATAL_ERROR
+            "Static libx264.a not found. Install it with: brew install x264")
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -132,4 +171,9 @@ if(APPLE)
     execute_process(COMMAND uname -m
         OUTPUT_VARIABLE SPLICE_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
     set_target_properties(Splice PROPERTIES OSX_ARCHITECTURES "${SPLICE_ARCH}")
+elseif(WIN32)
+    # System libs FFmpeg's Windows demuxers/network stubs and swscale/x264
+    # reference even in this network-disabled, mostly-decoder build.
+    target_link_libraries(Splice PRIVATE
+        ws2_32 secur32 bcrypt ole32 strmiids)
 endif()

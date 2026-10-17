@@ -1,0 +1,11 @@
+{
+  "name": "splice",
+  "version": "1.0.0",
+  "dependencies": [
+    {
+      "name": "ffmpeg",
+      "default-features": false,
+      "features": ["avcodec", "avformat", "swscale", "swresample", "snappy", "x264", "gpl"]
+    }
+  ]
+}
