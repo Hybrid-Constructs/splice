@@ -255,10 +255,27 @@ bool HapSplitter::sourceHasAlpha (const juce::File& file)
 
             // Some codecs leave codecpar->format unset (-1) until a frame is
             // decoded; fall back to the codec's own list of pixel formats.
-            if (par->format == AV_PIX_FMT_NONE && codec->pix_fmts != nullptr)
-                for (const AVPixelFormat* p = codec->pix_fmts; *p != AV_PIX_FMT_NONE; ++p)
-                    if (pixelFormatHasAlpha (*p))
-                        result = true;
+            if (par->format == AV_PIX_FMT_NONE)
+            {
+                // AVCodec::pix_fmts was removed in FFmpeg 8 (the vcpkg build);
+                // the replacement exists from FFmpeg 7.1.
+               #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT (61, 13, 100)
+                const void* configs = nullptr;
+                int numConfigs = 0;
+
+                if (avcodec_get_supported_config (nullptr, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0,
+                                                  &configs, &numConfigs) >= 0
+                    && configs != nullptr)
+                    for (int i = 0; i < numConfigs; ++i)
+                        if (pixelFormatHasAlpha (static_cast<const AVPixelFormat*> (configs)[i]))
+                            result = true;
+               #else
+                if (codec->pix_fmts != nullptr)
+                    for (const AVPixelFormat* p = codec->pix_fmts; *p != AV_PIX_FMT_NONE; ++p)
+                        if (pixelFormatHasAlpha (*p))
+                            result = true;
+               #endif
+            }
         }
     }
 
