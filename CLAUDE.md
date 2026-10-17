@@ -368,7 +368,9 @@ self-hosted runners, `pull_request_target`, or private submodules/URLs here.
 
 CI builds both platforms: macOS (`build`) and Windows (`build-windows`, vcpkg via
 the `windows` preset on the runner's preinstalled vcpkg, binary cache keyed on
-`vcpkg.json`). Neither has run on GitHub yet.
+`vcpkg.json`). The Windows job resets `VCPKG_ROOT` to `C:\vcpkg` after
+`msvc-dev-cmd`: Visual Studio's developer environment points it at VS's bundled
+vcpkg, which fails on a manifest with no `builtin-baseline`.
 
 ## Verification
 

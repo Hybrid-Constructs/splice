@@ -86,6 +86,12 @@ jobs:
       # Puts cl.exe on PATH for the Ninja generator the `windows` preset uses.
       - uses: ilammy/msvc-dev-cmd@v1
 
+      # Visual Studio's developer environment points VCPKG_ROOT at its own bundled
+      # vcpkg, which refuses a manifest without a builtin-baseline. Point it back
+      # at the image's git-cloned vcpkg.
+      - name: Use the image's vcpkg
+        run: echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
       # vcpkg builds FFmpeg + x264 + snappy from source on first run; its
       # binary cache is keyed on the manifest so later runs skip that.
       - name: Cache vcpkg binaries
