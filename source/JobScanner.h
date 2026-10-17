@@ -42,6 +42,11 @@ public:
     /** Strips a trailing _rgb / _a (case-insensitive). Empty if absent. */
     static juce::String stemFor (const juce::File& file, bool& isColour, bool& isMatte);
 
+    /** The output name for a pair chosen by hand: the colour file's name with a
+        trailing _rgb removed, else the matte's with _a removed, else the colour
+        file's name as it is. */
+    static juce::String stemForPair (const juce::File& colour, const juce::File& matte);
+
 private:
     /** Flattens zips/folders/files into a plain list of video files. */
     juce::Array<juce::File> gatherVideoFiles (const juce::StringArray& droppedPaths);

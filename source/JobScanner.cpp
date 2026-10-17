@@ -64,6 +64,19 @@ juce::String JobScanner::stemFor (const juce::File& file, bool& isColour, bool& 
     return {};
 }
 
+juce::String JobScanner::stemForPair (const juce::File& colour, const juce::File& matte)
+{
+    bool isColour = false, isMatte = false;
+
+    if (const auto stem = stemFor (colour, isColour, isMatte); isColour)
+        return stem;
+
+    if (const auto stem = stemFor (matte, isColour, isMatte); isMatte)
+        return stem;
+
+    return colour.getFileNameWithoutExtension();
+}
+
 juce::Array<juce::File> JobScanner::gatherVideoFiles (const juce::StringArray& droppedPaths)
 {
     juce::Array<juce::File> files;
@@ -185,7 +198,7 @@ JobScanner::Result JobScanner::scanForJoin (const juce::StringArray& droppedPath
     // first dropped as colour. This is the old two-zone case, preserved.
     if (result.jobs.isEmpty() && order.isEmpty() && unconventional.size() == 2)
     {
-        result.jobs.add ({ unconventional[0].getFileNameWithoutExtension(),
+        result.jobs.add ({ stemForPair (unconventional[0], unconventional[1]),
                            unconventional[0], unconventional[1] });
         return result;
     }

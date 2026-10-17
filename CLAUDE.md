@@ -210,6 +210,9 @@ Gotchas in the stem rule (`JobScanner::stemFor`):
   whose stem is `my_rgb`.
 - Bare `_rgb.mp4` / `_a.mp4` are rejected: an empty stem would bucket unrelated
   files together and name the output `_hap.mov`.
+- Two files dropped one per zone (or two loose, unconventionally named files) are named by
+  `JobScanner::stemForPair`: the colour file's name minus `_rgb`, else the matte's minus `_a`.
+  Using the colour file's raw name made `clip_rgb` + `clip_a` write `clip_rgb_hap.mov`.
 - Dotfiles (`.DS_Store`, `._` forks) are filtered, or a zip from macOS pollutes
   the job list.
 

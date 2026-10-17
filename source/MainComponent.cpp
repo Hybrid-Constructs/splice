@@ -343,7 +343,7 @@ void MainComponent::handleDrop (DropZone::Side side, const juce::StringArray& pa
 
     // Once both sides are set by hand, that's a one-job batch.
     if (explicitColour != juce::File() && explicitMatte != juce::File())
-        scanResult.jobs.add ({ explicitColour.getFileNameWithoutExtension(),
+        scanResult.jobs.add ({ JobScanner::stemForPair (explicitColour, explicitMatte),
                                explicitColour, explicitMatte });
 
     colourZone.setDisplayName (explicitColour != juce::File()
