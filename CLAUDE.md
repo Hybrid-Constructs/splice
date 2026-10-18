@@ -264,13 +264,15 @@ background.
 
 `UpdateChecker` makes a single anonymous `GET` to the public feed
 `/v2/public/updates/splice` on the Hybrid Constructs API (`UpdateConfig::feedUrl`)
-and compares the returned version with the running one (`isNewerVersion`, plain
-dotted-integer compare). If newer, `MainComponent` shows an "Update to x.y.z"
+and compares the returned version, with the feed's `revision` appended as a fourth
+component when it is numeric, against the running one (`isNewerVersion`, plain
+dotted-integer compare). Builds before the revision was read ignore it, so a
+revision-only release never shows them an update. If newer, `MainComponent` shows an "Update to x.y.z"
 button in the tab row that opens `UpdateConfig::downloadUrl` in the browser. It
 never downloads or installs anything.
 
 - The app is open source, so it carries **no API key**. The feed is deliberately
-  unauthenticated and returns only a version number, with no URLs from the server
+  unauthenticated and returns only a version and revision, with no URLs from the server
   that the app follows. Keep it that way: don't add a key, and don't make the app
   open a URL taken from the response.
 - **`downloadUrl` is the Splice page, `https://hybridconstructs.com/splice`.**

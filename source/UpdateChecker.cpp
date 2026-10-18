@@ -71,7 +71,15 @@ void UpdateChecker::run()
     if (threadShouldExit() || body.isEmpty())
         return;
 
-    const auto latest = juce::JSON::parse (body)["version"].toString();
+    const auto feed = juce::JSON::parse (body);
+    auto latest = feed["version"].toString();
+
+    // The feed's revision is the release's build number, which the app carries as the
+    // fourth component (1.0.0.N), so a revision-only release still counts as newer.
+    const auto revision = feed["revision"].toString();
+
+    if (latest.isNotEmpty() && revision.isNotEmpty() && revision.containsOnly ("0123456789"))
+        latest << "." << revision;
 
     if (latest.isEmpty() || ! isNewerVersion (latest, currentVersion))
         return;
