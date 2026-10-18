@@ -208,6 +208,8 @@ MainComponent::MainComponent()
     auto setUpTab = [this] (juce::TextButton& b, Mode m)
     {
         b.setClickingTogglesState (false);
+        b.setLookAndFeel (&tabLook);
+        b.setWantsKeyboardFocus (false);
         b.setColour (juce::TextButton::buttonColourId, panelColour);
         b.setColour (juce::TextButton::buttonOnColourId, accentColour);
         b.setColour (juce::TextButton::textColourOffId, dimTextColour);
@@ -219,18 +221,20 @@ MainComponent::MainComponent()
     setUpTab (joinTab,  Mode::join);
     setUpTab (splitTab, Mode::split);
 
-    joinTab.setConnectedEdges (juce::Button::ConnectedOnRight);
-    splitTab.setConnectedEdges (juce::Button::ConnectedOnLeft);
-
-    updateButton.setColour (juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-    updateButton.setColour (juce::TextButton::textColourOffId, accentColour);
+    // Update is the third segment: same fill and text as the tabs, never "on".
+    updateButton.setButtonText ("Update");
+    updateButton.setLookAndFeel (&tabLook);
+    updateButton.setWantsKeyboardFocus (false);
+    updateButton.setColour (juce::TextButton::buttonColourId, panelColour);
+    updateButton.setColour (juce::TextButton::textColourOffId, dimTextColour);
     updateButton.onClick = [] { juce::URL (UpdateConfig::downloadUrl).launchInDefaultBrowser(); };
     addChildComponent (updateButton);
 
     updateChecker.check (JUCE_APPLICATION_VERSION_STRING, [this] (const juce::String& latest)
     {
-        updateButton.setButtonText ("Update to " + latest);
+        juce::ignoreUnused (latest);
         updateButton.setVisible (true);
+        resized();
     });
 
     // Quality only affects the mp4s the splitter writes.
@@ -243,6 +247,7 @@ MainComponent::MainComponent()
 
     renderLook.disabledFillColour = panelColour;
     renderButton.setLookAndFeel (&renderLook);
+    renderButton.setWantsKeyboardFocus (false);
     renderButton.setColour (juce::TextButton::buttonColourId, accentColour);
     renderButton.setColour (juce::TextButton::textColourOnId, juce::Colours::black);
     renderButton.setColour (juce::TextButton::textColourOffId, juce::Colours::black);
@@ -284,6 +289,9 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    joinTab.setLookAndFeel (nullptr);
+    splitTab.setLookAndFeel (nullptr);
+    updateButton.setLookAndFeel (nullptr);
     progressBar.setLookAndFeel (nullptr);
     renderButton.setLookAndFeel (nullptr);
     batch.onProgress   = nullptr;
@@ -433,11 +441,20 @@ void MainComponent::resized()
     auto area = getLocalBounds().reduced (18);
 
     auto tabRow = area.removeFromTop (28);
-    const int tabWidth = juce::jmin (200, tabRow.getWidth());
-    auto tabs = tabRow.withSizeKeepingCentre (tabWidth, tabRow.getHeight());
-    joinTab.setBounds (tabs.removeFromLeft (tabWidth / 2));
-    splitTab.setBounds (tabs);
-    updateButton.setBounds (tabRow.removeFromRight (juce::jmax (0, (tabRow.getWidth() - tabWidth) / 2)));
+    // Join | Split, plus | Update when the feed reports a newer version: attached
+    // segments, centred as a group.
+    const bool hasUpdate = updateButton.isVisible();
+    const int segments = hasUpdate ? 3 : 2;
+    const int segmentWidth = juce::jmin (100, tabRow.getWidth() / segments);
+    auto tabs = tabRow.withSizeKeepingCentre (segmentWidth * segments, tabRow.getHeight());
+    joinTab.setBounds (tabs.removeFromLeft (segmentWidth));
+    splitTab.setBounds (tabs.removeFromLeft (segmentWidth));
+    updateButton.setBounds (tabs);
+
+    joinTab.setConnectedEdges (juce::Button::ConnectedOnRight);
+    splitTab.setConnectedEdges (hasUpdate ? juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight
+                                          : juce::Button::ConnectedOnLeft);
+    updateButton.setConnectedEdges (juce::Button::ConnectedOnLeft);
 
     area.removeFromTop (14);
 

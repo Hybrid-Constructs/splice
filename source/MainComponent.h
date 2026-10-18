@@ -103,7 +103,31 @@ public:
     stock look's half-alpha button colour, which left a disabled accent button
     reading as a faded version of the live one.
 */
-class GreyWhenDisabledLookAndFeel : public juce::LookAndFeel_V4
+// A flat fill that ignores hover, press and focus. The stock look shifts the colour on
+// all three, so a button changed colour the moment it was clicked.
+class FlatButtonLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    void drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour,
+                               bool, bool) override
+    {
+        const auto flags = button.getConnectedEdgeFlags();
+        const bool flatLeft  = (flags & juce::Button::ConnectedOnLeft)   != 0;
+        const bool flatRight = (flags & juce::Button::ConnectedOnRight)  != 0;
+
+        const auto bounds = button.getLocalBounds().toFloat().reduced (0.5f);
+        juce::Path path;
+        path.addRoundedRectangle (bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
+                                  6.0f, 6.0f, ! flatLeft, ! flatRight, ! flatLeft, ! flatRight);
+
+        g.setColour (backgroundColour);
+        g.fillPath (path);
+        g.setColour (button.findColour (juce::ComboBox::outlineColourId));
+        g.strokePath (path, juce::PathStrokeType (1.0f));
+    }
+};
+
+class GreyWhenDisabledLookAndFeel : public FlatButtonLookAndFeel
 {
 public:
     juce::Colour disabledFillColour { 0xff26292f };
@@ -114,8 +138,8 @@ public:
     {
         if (button.isEnabled())
         {
-            juce::LookAndFeel_V4::drawButtonBackground (g, button, backgroundColour,
-                                                        shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+            FlatButtonLookAndFeel::drawButtonBackground (g, button, backgroundColour,
+                                                         shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
             return;
         }
 
@@ -167,6 +191,7 @@ private:
     // "12 pairs · 3 skipped" — sits between the zones and the button.
     juce::Label badge;
 
+    FlatButtonLookAndFeel tabLook;
     juce::TextButton joinTab  { "Join" };
     juce::TextButton splitTab { "Split" };
 
